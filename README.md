@@ -102,6 +102,6 @@ Outputs
 1)	Model object
 2)	Training mask used for this particular training session
 3)	Testing mask used for this particular training session
-4)	 
-Delete
+
+# Delete
 Obviously this one needs to be renamed and rewritten – I would suggest just calling it “Main” instead. The module ties a lot of things together and doesn’t have any functions within it. So just from a programming perspective it sucks. Need to do some work on getting it into a package that I can launch as an exe and actually compile.
