@@ -53,6 +53,8 @@ else:
 times = Build_Examples.insert_examples()
 train_X, train_Y, test_X, test_Y = Data_Setup.setup(times)
 
+train_Y = tf.keras.utils.to_categorical(train_Y)
+test_Y = tf.keras.utils.to_categorical(test_Y)
 """
 This is the actual model part. Now I don't want to build it here, I am going to
 make it in the RNN_Model file. From there it will just be returned here
@@ -60,16 +62,16 @@ and then executed here. Reason to execute here is there isn't a ton of other
 stuff that needs to happen to be honest.
 """
 
-model = Build_Model.create_model(train_X, 128,0.3)
+model = Build_Model.create_model(train_X, 64,0.3)
 
-opt = tf.keras.optimizers.Adam(lr=1e-3, decay=1e-5)
+opt = tf.keras.optimizers.Adam(lr=1e-15, decay=1e-5)
 #lr = learning rate
 #decay = slowly take smaller steps
-model.compile(loss='sparse_categorical_crossentropy', 
+model.compile(loss='categorical_crossentropy', 
               optimizer=opt,
               metrics = ['accuracy'])
 
-model.fit(train_X, train_Y, epochs=3, validation_data=(test_X, test_Y))
+history = model.fit(train_X, train_Y, batch_size=20, epochs=3, validation_data=(test_X, test_Y))
 
 
 
