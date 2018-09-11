@@ -24,8 +24,7 @@ def setup(times):
     for j in tqdm(times):
         Y.append(Build_Examples.insert_ones(np.zeros((5000,1)), j[0], j[2], j[3],5000))
     
-    #Read in X array
-    X = Retrieve_X_H5.get_X()
+    X = Retrieve_X_H5.get_X(times)
     
     items = range(len(X))
     sample = set(random.sample(items, 312)) #Get a sample of which indicies for train
