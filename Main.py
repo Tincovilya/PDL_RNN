@@ -15,10 +15,9 @@ import Gather_Files
 import Build_Examples
 import Send_X_to_H5
 import Data_Setup
-import RNN
+import Build_Model
 
-import numpy as np
-from tqdm import tqdm
+import tensorflow as tf
 import os
 from pathlib import Path
 
@@ -54,7 +53,23 @@ else:
 times = Build_Examples.insert_examples()
 train_X, train_Y, test_X, test_Y = Data_Setup.setup(times)
 
+"""
+This is the actual model part. Now I don't want to build it here, I am going to
+make it in the RNN_Model file. From there it will just be returned here
+and then executed here. Reason to execute here is there isn't a ton of other 
+stuff that needs to happen to be honest.
+"""
 
+model = Build_Model.create_model(train_X, 128,0.3)
+
+opt = tf.keras.optimizers.Adam(lr=1e-3, decay=1e-5)
+#lr = learning rate
+#decay = slowly take smaller steps
+model.compile(loss='sparse_categorical_crossentropy', 
+              optimizer=opt,
+              metrics = ['accuracy'])
+
+model.fit(train_X, train_Y, epochs=3, validation_data=(test_X, test_Y))
 
 
 
