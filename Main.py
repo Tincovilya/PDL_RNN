@@ -14,6 +14,7 @@ import PreProcess_Data
 import Gather_Files
 import Build_Examples
 import Send_X_to_H5
+import Data_Setup
 import RNN
 
 import numpy as np
@@ -48,5 +49,36 @@ else:
               and all of that should be tab deliminated (4 columns).""")
         exit()
         
-#Next we can retreive the new X and Y arrays that will be used for training
-#and testing the RNN.
+#Next I can retrieve my training and test sets. To do this, use the X.h5 as well
+#Build examples code, although I might wrap it all in a new module.
+times = Build_Examples.insert_examples()
+train_X, train_Y, test_X, test_Y = Data_Setup.setup(times)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
