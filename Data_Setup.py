@@ -22,7 +22,7 @@ def setup(times):
     #Build y array
     Y=[]
     for j in tqdm(times):
-        Y.append(Build_Examples.insert_ones(np.zeros((5000,1)), j[0], j[2], j[3],5000))
+        Y.append(Build_Examples.insert_ones(np.zeros((3000,1)), j[0], j[2], j[3],3000))
     
     X = Retrieve_X_H5.get_X(times)
     

@@ -62,16 +62,19 @@ and then executed here. Reason to execute here is there isn't a ton of other
 stuff that needs to happen to be honest.
 """
 
-model = Build_Model.create_model(train_X, 64,0.3)
+model = Build_Model.create_model(train_X, 128,0.3)
 
-opt = tf.keras.optimizers.Adam(lr=1e-15, decay=1e-5)
+opt = tf.keras.optimizers.Adam(lr=1e-6, decay=1e-5)
 #lr = learning rate
 #decay = slowly take smaller steps
-model.compile(loss='categorical_crossentropy', 
+model.compile(loss='binary_crossentropy', 
               optimizer=opt,
               metrics = ['accuracy'])
 
-history = model.fit(train_X, train_Y, batch_size=20, epochs=3, validation_data=(test_X, test_Y))
+history = model.fit(train_X, train_Y, 
+                    batch_size=32, 
+                    epochs=80,
+                    validation_data=(test_X, test_Y))
 
 
 

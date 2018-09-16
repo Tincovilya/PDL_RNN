@@ -35,7 +35,7 @@ def insert_examples():
         start_time = row.Start_Change
         if (end_time - start_time).seconds < 2:
             weld = int((end_time - start_time).microseconds/1000)
-            remaining = 5000 - weld
+            remaining = 3000 - weld
             random_before = int((np.random.rand(1)*remaining)[0])
             random_end = remaining - random_before
             
@@ -55,8 +55,8 @@ def insert_ones(y, time_start, start_sample, end_sample, Ty):
     This will then turn all of those time steps into 1s instead of 0s and return
     the updated y to append into my examples
     """
-    write_from = int(((start_sample-time_start).seconds*1000 + (start_sample-time_start).microseconds/1000)*(Ty/5000))
-    write_to = int(((end_sample-start_sample).seconds*1000 + (end_sample-start_sample).microseconds/1000)*(Ty/5000)) + write_from
+    write_from = int(((start_sample-time_start).seconds*1000 + (start_sample-time_start).microseconds/1000)*(Ty/3000))
+    write_to = int(((end_sample-start_sample).seconds*1000 + (end_sample-start_sample).microseconds/1000)*(Ty/3000)) + write_from
     
     for i in range(Ty):
         if i >= write_from and i <= write_to:
@@ -94,7 +94,7 @@ def get_xs(time_start, time_end):
                 x = x.interpolate(limit_direction="both")
                 #x["Time"] = x.index -- RNN doesn't take in time values
                 x.set_index(pd.Series(range(0,len(x))), inplace=True)
-                while len(x) > 5000:
+                while len(x) > 3000:
                     x = x.drop(x.index[len(x)-1])
                 return x.values
                 break
@@ -113,7 +113,7 @@ def get_xs(time_start, time_end):
                 x = x.interpolate(limit_direction="both")
                 #x["Time"] = x.index -- RNN doesn't take in time values
                 x.set_index(pd.Series(range(0,len(x))), inplace=True)
-                while len(x) > 5000:
+                while len(x) > 3000:
                     x = x.drop(x.index[len(x)-1])
                 return x.values
                 break
