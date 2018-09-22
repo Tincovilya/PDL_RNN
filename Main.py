@@ -16,10 +16,46 @@ import Build_Examples
 import Send_X_to_H5
 import Data_Setup
 import Build_Model
+import Check_Model
 
 import tensorflow as tf
+from keras import backend as K
 import os
 from pathlib import Path
+from sklearn.metrics import confusion_matrix
+
+def precision_threshold(threshold=0.5):
+    def precision(y_true, y_pred):
+        """Precision metric.
+        Computes the precision over the whole batch using threshold_value.
+        """
+        threshold_value = threshold
+        # Adaptation of the "round()" used before to get the predictions. Clipping to make sure that the predicted raw values are between 0 and 1.
+        y_pred = K.cast(K.greater(K.clip(y_pred, 0, 1), threshold_value), K.floatx())
+        # Compute the number of true positives. Rounding in prevention to make sure we have an integer.
+        true_positives = K.round(K.sum(K.clip(y_true * y_pred, 0, 1)))
+        # count the predicted positives
+        predicted_positives = K.sum(y_pred)
+        # Get the precision ratio
+        precision_ratio = true_positives / (predicted_positives + K.epsilon())
+        return precision_ratio
+    return precision
+
+def recall_threshold(threshold = 0.5):
+    def recall(y_true, y_pred):
+        """Recall metric.
+        Computes the recall over the whole batch using threshold_value.
+        """
+        threshold_value = threshold
+        # Adaptation of the "round()" used before to get the predictions. Clipping to make sure that the predicted raw values are between 0 and 1.
+        y_pred = K.cast(K.greater(K.clip(y_pred, 0, 1), threshold_value), K.floatx())
+        # Compute the number of true positives. Rounding in prevention to make sure we have an integer.
+        true_positives = K.round(K.sum(K.clip(y_true * y_pred, 0, 1)))
+        # Compute the number of positive targets.
+        possible_positives = K.sum(K.clip(y_true, 0, 1))
+        recall_ratio = true_positives / (possible_positives + K.epsilon())
+        return recall_ratio
+    return recall
 
 #If the sensor data hasn't been saved into a database let's do that now
 cur_path = os.path.dirname(os.path.abspath(__file__))
@@ -69,19 +105,31 @@ opt = tf.keras.optimizers.Adam(lr=1e-6, decay=1e-5)
 #decay = slowly take smaller steps
 model.compile(loss='binary_crossentropy', 
               optimizer=opt,
-              metrics = ['accuracy'])
+              metrics = [precision_threshold(0.8),recall_threshold(0.8), 'accuracy'])
 
 history = model.fit(train_X, train_Y, 
                     batch_size=32, 
-                    epochs=80,
+                    epochs=50,
                     validation_data=(test_X, test_Y))
 
+y_pred, y_test, preds = Check_Model.predictions(test_X,test_Y, model)
 
+Check_Model.plot_history([('Baseline', history)])
 
+"""
+Ok so the idea here will be to use a confusion matrix to get results.
+First I need to change the [0,1] vectors into [1] vectors. This is just because
+it is confused (haha) on how to plot this. Needs my data to be Yes, No, or
+whatever.
 
+This code needs to be run after the above because the confusion matrix will plot
+really weird if you leave it like this - just copy and paste and run.
 
+cnf_matrix = confusion_matrix(y_test, y_pred)
 
-
+Check_Model.confusion_matrix(cnf_matrix, classes=["No Weld", "Weld"], normalize=True,
+                      title='Normalized confusion matrix')
+"""
 
 
 
