@@ -20,8 +20,11 @@ import Check_Model
 
 import tensorflow as tf
 from keras import backend as K
+from tensorflow.keras.callbacks import TensorBoard
 import os
+import time
 from pathlib import Path
+import numpy as np
 from sklearn.metrics import confusion_matrix
 
 def precision_threshold(threshold=0.5):
@@ -89,6 +92,13 @@ else:
 times = Build_Examples.insert_examples()
 train_X, train_Y, test_X, test_Y = Data_Setup.setup(times)
 
+#Number of welds vs. no welds:
+temp_Y = np.reshape(train_Y, (train_Y.shape[0]*train_Y.shape[1],))
+
+weight = len(temp_Y)/np.sum(temp_Y)
+sample_weights = train_Y*27 + 1
+sample_weights = sample_weights.reshape(312,3000)
+
 train_Y = tf.keras.utils.to_categorical(train_Y)
 test_Y = tf.keras.utils.to_categorical(test_Y)
 """
@@ -105,12 +115,21 @@ opt = tf.keras.optimizers.Adam(lr=1e-6, decay=1e-5)
 #decay = slowly take smaller steps
 model.compile(loss='binary_crossentropy', 
               optimizer=opt,
-              metrics = [precision_threshold(0.8),recall_threshold(0.8), 'accuracy'])
+              metrics = [precision_threshold(0.8),recall_threshold(0.8), 'accuracy'],
+              sample_weight_mode="temporal")
 
-history = model.fit(train_X, train_Y, 
+NAME = f"Testing_Model - {int(time.time())}"
+
+tensorboard = TensorBoard(log_dir=f'logs/{NAME}')
+#calculate the weighting to use for an imbalanced data set
+class_weights = {0:1.,1:weight}
+
+history = model.fit(train_X, train_Y,
+                    sample_weight=sample_weights,
                     batch_size=32, 
                     epochs=50,
-                    validation_data=(test_X, test_Y))
+                    validation_data=(test_X, test_Y),
+                    callbacks=[tensorboard])
 
 y_pred, y_test, preds = Check_Model.predictions(test_X,test_Y, model)
 
