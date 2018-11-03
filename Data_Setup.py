@@ -18,16 +18,16 @@ import Build_Examples
 import Retrieve_X_H5
 from sklearn import preprocessing
 
-def setup(times):
+def setup(times, Ty, maxi):
     #Build y array
     Y=[]
     for j in tqdm(times):
-        Y.append(Build_Examples.insert_ones(np.zeros((3000,1)), j[0], j[2], j[3],3000))
+        Y.append(Build_Examples.insert_ones(np.zeros((Ty,1)), j[0], j[2], j[3],Ty,maxi))
     
     X = Retrieve_X_H5.get_X(times)
     
-    items = range(len(X))
-    sample = set(random.sample(items, 312)) #Get a sample of which indicies for train
+    items = range(len(Y))
+    sample = set(random.sample(items, int(len(times)*0.8))) #Get a sample of which indicies for train
     train_mask = sorted(sample)
     test_mask = sorted(set(items)-sample)
     #Normalize data

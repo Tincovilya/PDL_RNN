@@ -15,7 +15,8 @@ import Gather_Files
 import Build_Examples
 import Send_X_to_H5
 import Data_Setup
-import Build_Model
+#import Build_Model
+import Build_Model_CNN
 import Check_Model
 
 import tensorflow as tf
@@ -69,16 +70,25 @@ else:
     PreProcess_Data.main(cur_path, "Temp")
     PreProcess_Data.main(cur_path, "Gyro")
     Gather_Files.main()
-    
+
+#Define some model parameters (stride, etc.)
+STRIDE = 2
+NUM_FILTERS = 48
+KERN_SIZE = 4
+GRU_UNITS = 68
+DR = 0.3
+WEIGHT = 5
+ 
 #If there isn't an X h5 made, make that - will also need a times file that is
 #containing a list of ONLY times that we need annnnnd yeah that's it.
+times, maxi = Build_Examples.insert_examples()
 X_name = Path(cur_path + "\X_Examples.h5")
 times_name = Path(cur_path + "\RNN Data Times.txt")
 if X_name.exists():
     print("Xs are in an h5, dont need to do anything here")
 else:
     if times_name.exists():
-        Send_X_to_H5.Send_X_To_h5()
+        Send_X_to_H5.Send_X_To_h5(times,maxi)
     else:
         print("""You'll need to add a data file to this folder structure with\n
               the name of RNN Data Times.txt\n
@@ -89,16 +99,16 @@ else:
         
 #Next I can retrieve my training and test sets. To do this, use the X.h5 as well
 #Build examples code, although I might wrap it all in a new module.
-times = Build_Examples.insert_examples()
-train_X, train_Y, test_X, test_Y = Data_Setup.setup(times)
+
+Ty = int((int(maxi - KERN_SIZE)/STRIDE)+1)
+train_X, train_Y, test_X, test_Y = Data_Setup.setup(times, Ty, maxi)
 
 #Number of welds vs. no welds:
 temp_Y = np.reshape(train_Y, (train_Y.shape[0]*train_Y.shape[1],))
 
 weight = len(temp_Y)/np.sum(temp_Y)
-sample_weights = train_Y*27 + 1
-sample_weights = sample_weights.reshape(312,3000)
-
+sample_weights = train_Y*WEIGHT + 1
+sample_weights = sample_weights.reshape(int(len(times)*0.8),Ty)
 train_Y = tf.keras.utils.to_categorical(train_Y)
 test_Y = tf.keras.utils.to_categorical(test_Y)
 """
@@ -108,7 +118,15 @@ and then executed here. Reason to execute here is there isn't a ton of other
 stuff that needs to happen to be honest.
 """
 
-model = Build_Model.create_model(train_X, 128,0.3)
+#model = Build_Model.create_model(train_X, 128,0.3)
+
+model = Build_Model_CNN.create_model(train_X,
+                                     GRU_UNITS,
+                                     DR,
+                                     NUM_FILTERS,
+                                     KERN_SIZE,
+                                     STRIDE)
+print(model.summary())
 
 opt = tf.keras.optimizers.Adam(lr=1e-6, decay=1e-5)
 #lr = learning rate
@@ -118,16 +136,14 @@ model.compile(loss='binary_crossentropy',
               metrics = [precision_threshold(0.8),recall_threshold(0.8), 'accuracy'],
               sample_weight_mode="temporal")
 
-NAME = f"Testing_Model - {int(time.time())}"
+NAME = f"Testing_Model - {int(time.time())} - Weight {WEIGHT} - Filters {NUM_FILTERS} - GRU {GRU_UNITS}"
 
 tensorboard = TensorBoard(log_dir=f'logs/{NAME}')
-#calculate the weighting to use for an imbalanced data set
-class_weights = {0:1.,1:weight}
 
 history = model.fit(train_X, train_Y,
                     sample_weight=sample_weights,
                     batch_size=32, 
-                    epochs=50,
+                    epochs=40,
                     validation_data=(test_X, test_Y),
                     callbacks=[tensorboard])
 
@@ -141,6 +157,12 @@ First I need to change the [0,1] vectors into [1] vectors. This is just because
 it is confused (haha) on how to plot this. Needs my data to be Yes, No, or
 whatever.
 
+I need to activate tensorboard and then recall. To do that run the following
+in cmd consol - obviously first I need to go into the directory my logs are in
+tensorboard --logdir = logs/
+http://DESKTOP-P5P7KIT:6006
+
+
 This code needs to be run after the above because the confusion matrix will plot
 really weird if you leave it like this - just copy and paste and run.
 
@@ -148,24 +170,11 @@ cnf_matrix = confusion_matrix(y_test, y_pred)
 
 Check_Model.confusion_matrix(cnf_matrix, classes=["No Weld", "Weld"], normalize=True,
                       title='Normalized confusion matrix')
+
+See if I predicted anything...
+for i in preds:
+    if i.sum() < len(i) and i.sum() > 0:
+        plt.plot(range(0,len(preds[0])),np.argmax(i,axis=1))
 """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

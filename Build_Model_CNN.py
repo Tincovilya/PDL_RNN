@@ -14,15 +14,22 @@ Note that DR = dropout rate
 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, CuDNNGRU, TimeDistributed
+from tensorflow.keras.layers import Dense, Dropout, CuDNNGRU, TimeDistributed, Conv1D
 from tensorflow.keras import regularizers
 
-def create_model(x_train, GRU_units,DR):
+def create_model(x_train, GRU_units,DR, num_filters,kernel_size_passed,stride):
     
     model = Sequential()
+    print("Adding CNN layer...")
+    model.add(Conv1D(filters=num_filters,
+                       input_shape = (x_train.shape[1:]), 
+                       kernel_size=kernel_size_passed, 
+                       strides=stride,
+                       activation='relu'))
+    model.add(Dropout(DR))    
+    
     print("Adding first layer...")
     model.add(CuDNNGRU(GRU_units,
-                      input_shape = (x_train.shape[1:]),
                       return_sequences=True,
                       kernel_regularizer=regularizers.l2(0.01)))
     model.add(Dropout(DR))
@@ -35,12 +42,12 @@ def create_model(x_train, GRU_units,DR):
     model.add(Dropout(DR))
     print(model.output_shape)
     
-    print("Adding third layer...")
-    model.add(CuDNNGRU(GRU_units, 
-                        return_sequences=True,
-                        kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dropout(DR))
-    print(model.output_shape)    
+    #print("Adding third layer...")
+    #model.add(CuDNNGRU(GRU_units, 
+    #                    return_sequences=True,
+    #                    kernel_regularizer=regularizers.l2(0.01)))
+    #model.add(Dropout(DR))
+    #print(model.output_shape)    
     
     print("Adding fourth layer (Dense 32)...")
     model.add(TimeDistributed(Dense(32, activation='relu')))

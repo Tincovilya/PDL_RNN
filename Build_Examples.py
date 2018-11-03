@@ -5,7 +5,7 @@ Created on Thu Mar  8 15:51:54 2018
 This file is going to create the examples "X" that will be fed into my RNN for training and
 development purposes.
 
-The examples will all be 5 second clips of Acceleration, Gyro, and pressure data with
+The examples will all be 3 second clips of Acceleration, Gyro, and pressure data with
 the welds being not centered. So initially it will read in a list of time stamps
 and then it will use these to build the samples to feed into the RNN with labelling
 so it will also generate Y
@@ -18,45 +18,57 @@ import numpy as np
 import datetime as dt
 
 def insert_examples():
-    weld_times = pd.read_csv("RNN Data Times.txt",sep='\t', header=0,names=["id","Start","End","Regime"])
-    dates = pd.Series("2017-12-14 ", index=weld_times.index)
+    weld_times = pd.read_csv("RNN Data Times.txt",sep='\t', header=0,names=["id","Date","Start","End","Regime"],
+                             dtype={"id":"int64","Date":"str","Start":"str","End":"str","Regime":"float64"})
+    dates = pd.Series(weld_times.Date, index=weld_times.index)
     weld_times["Start_Change"] = dates + weld_times.Start
     weld_times["End_Change"] = dates + weld_times.End
-    weld_times.Start_Change = pd.to_datetime(weld_times.Start_Change, format='%Y-%m-%d %H:%M:%S.%f')
-    weld_times.End_Change = pd.to_datetime(weld_times.End_Change, format='%Y-%m-%d %H:%M:%S.%f')
+    weld_times.Start_Change = pd.to_datetime(weld_times.Start_Change, format='%d/%m/%y %H:%M:%S.%f')
+    weld_times.End_Change = pd.to_datetime(weld_times.End_Change, format='%d/%m/%y %H:%M:%S.%f')
     weld_times = weld_times.drop("id", axis=1)
     weld_times = weld_times.drop("Start", axis=1)
     weld_times = weld_times.drop("End", axis=1)
+    weld_times = weld_times.drop("Date", axis=1)
     times = []
     
+    maxi = 0
     for row in weld_times.itertuples():
-        #need to make 5 second clips, so first get the number of milliseconds in the weld
+        end_time = row.End_Change
+        start_time = row.Start_Change
+        diff = (end_time - start_time).seconds
+        if  diff < 2 and diff > maxi:
+            maxi = (end_time - start_time).seconds
+    
+    maxi = int(maxi*1400) - 1
+    
+    for row in weld_times.itertuples():
+        #need to make x second clips, so first get the number of milliseconds in the weld
         end_time = row.End_Change
         start_time = row.Start_Change
         if (end_time - start_time).seconds < 2:
             weld = int((end_time - start_time).microseconds/1000)
-            remaining = 3000 - weld
+            remaining = maxi - weld
             random_before = int((np.random.rand(1)*remaining)[0])
             random_end = remaining - random_before
             
             start_sample = start_time - dt.timedelta(microseconds = random_before*1000)
             end_sample = end_time + dt.timedelta(microseconds = random_end*1000)
             times.append([start_sample, end_sample, start_time, end_time])
-    return times
+    return times, maxi
 
 
-def insert_ones(y, time_start, start_sample, end_sample, Ty):
+def insert_ones(y, time_start, start_sample, end_sample, Ty, maxi):
     """
-    Pass in an array of 0s of length 5 seconds (All of size 1665)
-    Corresponds to a filter size of 8 and a stride of 3 for a 5000 item X
+    Pass in an array of 0s of length 3 seconds (All of size 1665)
+    Corresponds to a filter size of 8 and a stride of 3 for a 3000 item X
     each entry in Y then corresponds to ~ 0.003s 
     Also the start/end times of a weld
     
     This will then turn all of those time steps into 1s instead of 0s and return
     the updated y to append into my examples
     """
-    write_from = int(((start_sample-time_start).seconds*1000 + (start_sample-time_start).microseconds/1000)*(Ty/3000))
-    write_to = int(((end_sample-start_sample).seconds*1000 + (end_sample-start_sample).microseconds/1000)*(Ty/3000)) + write_from
+    write_from = int(((start_sample-time_start).seconds*1000 + (start_sample-time_start).microseconds/1000)*(Ty/maxi))
+    write_to = int(((end_sample-start_sample).seconds*1000 + (end_sample-start_sample).microseconds/1000)*(Ty/maxi)) + write_from
     
     for i in range(Ty):
         if i >= write_from and i <= write_to:
@@ -64,7 +76,7 @@ def insert_ones(y, time_start, start_sample, end_sample, Ty):
             
     return y
 
-def get_xs(time_start, time_end):
+def get_xs(time_start, time_end, maxi):
     """
     This will take in the times function and return an array of arrays that 
     has all of the acceleration/ pressure gyro data for the time stamps passed
@@ -94,7 +106,7 @@ def get_xs(time_start, time_end):
                 x = x.interpolate(limit_direction="both")
                 #x["Time"] = x.index -- RNN doesn't take in time values
                 x.set_index(pd.Series(range(0,len(x))), inplace=True)
-                while len(x) > 3000:
+                while len(x) > maxi:
                     x = x.drop(x.index[len(x)-1])
                 return x.values
                 break
@@ -113,7 +125,7 @@ def get_xs(time_start, time_end):
                 x = x.interpolate(limit_direction="both")
                 #x["Time"] = x.index -- RNN doesn't take in time values
                 x.set_index(pd.Series(range(0,len(x))), inplace=True)
-                while len(x) > 3000:
+                while len(x) > maxi:
                     x = x.drop(x.index[len(x)-1])
                 return x.values
                 break
